@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>洋葱</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace; /* 模拟代码字体 */
+            text-align: center;
+            background: #000; /* 黑色背景 */
+            color: #0f0; /* 绿色文本，模拟代码 */
+            margin: 0;
+            overflow: hidden;
+        }
+        body, canvas {
+            cursor: none !important;
+        }
+        #matrix-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw !important;
+            height: 100vh !important;
+            z-index: 0;
+            pointer-events: none;
+        }
+        #custom-cursor {
+            font-size: 1.22em !important;
+            font-weight: 900;
+            letter-spacing: 0.03em;
+            opacity: 1 !important;
+            filter: none !important;
+            text-shadow: none !important;
+            user-select: none;
+            pointer-events: none;
+            z-index: 10000;
+            position: fixed;
+            left: 0;
+            top: 0;
+            color: #fff;
+            font-family: Consolas, 'Fira Mono', Menlo, 'IBM Plex Mono', 'Roboto Mono', monospace;
+            transition: opacity 0.15s;
+        }
+        .onion-trail {
+            font-size: 1.22em !important;
+            font-weight: 900;
+            letter-spacing: 0.03em;
+            opacity: 1 !important;
+            filter: none !important;
+            text-shadow: none !important;
+            user-select: none;
+            pointer-events: none;
+            z-index: 9999;
+            position: fixed;
+            left: 0;
+            top: 0;
+            color: #fff;
+            font-family: Consolas, 'Fira Mono', Menlo, 'IBM Plex Mono', 'Roboto Mono', monospace;
+            transition: none !important;
+        }
+        /* .ui-container 样式保留，元素将被移除，但样式留作参考 */
+        .ui-container {
+            position: relative;
+            z-index: 1;
+            width: 70vw;
+            margin: 40px auto 0 auto;
+            padding: 30px 30px 25px 30px;
+            background: rgba(0,0,0,0.7);
+            border: 2px solid #0f0;
+            border-radius: 0;
+        }
+        .boxed-title {
+            font-size: 4em;
+            font-weight: bold;
+            letter-spacing: 0.2em;
+            text-align: center;
+            border: 2px solid #0f0;
+            border-radius: 0;
+            margin-bottom: 24px;
+            padding: 10px 0;
+            font-family: Consolas, 'Fira Mono', 'IBM Plex Mono', monospace !important;
+            background: rgba(0,0,0,0.95);
+            color: #0f0;
+            z-index: 11000;
+            position: relative;
+        }
+        #input, #output {
+            border: 1.5px solid #0f0;
+            border-radius: 0;
+            background: #000;
+            color: #0f0;
+            font-family: 'Courier New', monospace;
+            z-index: 11000;
+            position: relative;
+            text-align: center;
+            font-size: 1.35em;
+        }
+        #input {
+            min-height: 80px;
+            margin-bottom: 20px;
+            z-index: 11000;
+            position: relative;
+        }
+        #input::placeholder {
+            text-align: center;
+        }
+        button {
+            border: 1.5px solid #0f0;
+            border-radius: 0;
+            background: #000;
+            color: #0f0;
+            font-family: 'Courier New', monospace;
+            margin-bottom: 18px;
+            margin-right: 8px;
+            cursor: pointer;
+            z-index: 11000;
+            position: relative;
+            font-size: 1.2em;
+        }
+        #output {
+            margin-top: 20px;
+            min-height: 40px;
+            padding: 8px;
+            max-height: 300px;
+            overflow-y: auto;
+            background: rgba(0,0,0,0.75);
+            z-index: 11000;
+            position: relative;
+        }
+        .center-block {
+            width: 80vw;
+            max-width: 1080px;
+            min-width: 320px;
+            margin: 0 auto 18px auto;
+            display: block;
+        }
+        #loading {
+            display: none;
+            margin-top: 10px;
+            font-style: italic;
+            z-index: 11000;
+            position: relative;
+        }
+    </style>
+</head>
+<body>
+    <!-- 如需更换音乐只需替换static/music/bgm.mp3或更改src即可 -->
+    <audio id="bgm" src="static/music/BGM1.mp3" autoplay loop preload="auto"></audio>
+    <div id="custom-cursor">ONION</div>
+    <canvas id="matrix-bg"></canvas>
+    <h1 class="boxed-title center-block">ONION</h1>
+    <textarea id="input" class="center-block" placeholder="请输入一句话，比如‘意义是个动词’"></textarea><br>
+    <button class="center-block" onclick="inflateText()">意义膨胀</button>
+    <button class="center-block" onclick="deflateText()">意义坍缩</button>
+    <div id="output" class="center-block"></div>
+    <div id="loading" class="center-block">正在剥洋葱……</div>
+
+    <script>
+        // 自定义鼠标指针和BGM自动播放逻辑
+        (function() {
+            // 最新 onion-trail 拖影动画逻辑
+            // 替换为最新版
+            const customCursor = document.getElementById("custom-cursor");
+            if (customCursor) {
+                document.addEventListener("mousemove", (e) => {
+                    const rect = customCursor.getBoundingClientRect();
+                    const offsetX = rect.width / 2;
+                    const offsetY = rect.height / 2;
+                    customCursor.style.transform = `translate(${e.clientX - offsetX}px, ${e.clientY - offsetY}px)`;
+                    customCursor.style.opacity = 1;
+                    // 拖影
+                    const trailDiv = document.createElement('div');
+                    trailDiv.className = 'onion-trail';
+                    trailDiv.innerText = customCursor.innerText;
+                    trailDiv.style.transform = `translate(${e.clientX - offsetX}px, ${e.clientY - offsetY}px)`;
+                    trailDiv.style.opacity = 1;
+                    trailDiv.style.transition = 'opacity 1.5s linear, color 1.5s linear';
+                    document.body.appendChild(trailDiv);
+
+                    let t = 0;
+                    const fadeSteps = 15;
+                    const interval = setInterval(() => {
+                        t++;
+                        const percent = t / fadeSteps;
+                        // rgb(0,255,0) -> rgb(255,255,255)
+                        const c = Math.floor(255 * percent);
+                        trailDiv.style.color = `rgb(${c},255,${c})`;
+                        trailDiv.style.opacity = 1 - percent;
+                        if (t > fadeSteps) {
+                            clearInterval(interval);
+                            if (trailDiv.parentNode) trailDiv.parentNode.removeChild(trailDiv);
+                        }
+                    }, 100);
+                });
+                document.addEventListener("mouseleave", () => {
+                    customCursor.style.opacity = 0;
+                });
+                document.addEventListener("mouseenter", () => {
+                    customCursor.style.opacity = 1;
+                });
+            }
+            // 自动播放BGM
+            const bgm = document.getElementById('bgm');
+            if (bgm) {
+                function tryPlayBGM() {
+                    bgm.volume = 0.45;
+                    const play = () => {
+                        bgm.play().catch(()=>{});
+                        document.removeEventListener("click", play);
+                    };
+                    document.addEventListener("click", play);
+                }
+                tryPlayBGM();
+            }
+        })();
+        // Matrix Rain 核心参数配置
+        const baseFontSize = 16; // 字体大小=行距，值越大垂直间距越宽
+        let rainSpeed = 65; // 下落速度，值越大刷新越慢，代码雨下落更慢（初始速度）
+        const baseRainSpeed = 65;
+        const peelingRainSpeed = 30; // 剥洋葱时加快速度
+        const peeledRainSpeed = 80; // 剥开后稍慢速度
+        const trailOpacity = 0.03; // 拖影透明度，值越小拖影越长、消失越慢
+
+        // 初始字符集：两个短句随机在列间隔出现
+        const idleSentences = ["世界的意义是什么？", "是洋葱！！！"];
+
+        // 剥洋葱时字符集（多句，随机每列抽取）
+        const peelingSentences = [
+            "剥开他？",
+            "好臭",
+            "好酸",
+            "好辣啊啊啊啊",
+            "我讨厌剥洋葱",
+            "怎么他妈那么多层啊？",
+            "还没完吗？"
+        ];
+
+        // 剥开后字符集，整屏横向流动同一句
+        const peeledSentence = "再也不要剥洋葱了！";
+
+        const canvas = document.getElementById("matrix-bg");
+        const ctx = canvas.getContext("2d");
+        let width = window.innerWidth;
+        let height = window.innerHeight;
+        canvas.width = width;
+        canvas.height = height;
+        canvas.style.position = "fixed";
+        canvas.style.top = 0;
+        canvas.style.left = 0;
+        canvas.style.zIndex = 0;
+        canvas.style.pointerEvents = "none";
+
+        const fontSize = baseFontSize;
+        let columns = Math.floor(width / fontSize); // 列数由字体大小决定
+        let drops = Array(columns).fill(1); // 每列的“雨滴”起始位置
+
+        // 当前雨内容状态："idle", "peeling", "peeled"
+        let currentRainMode = "idle";
+
+        // 用于peeled模式横向流动位置
+        let peeledOffset = 0;
+
+        // 初始化 idle 模式字符集（每列随机间隔出现两个短句）
+        // 为了方便drawMatrix处理，idle模式下每列随机选择一个句子和一个字符索引
+        // 这里我们存储每列当前句子和当前字符索引
+        let idleColumnData = [];
+
+        function initIdleColumnData() {
+            idleColumnData = [];
+            for (let i = 0; i < columns; i++) {
+                // 随机选择idle句子
+                const sentence = idleSentences[Math.floor(Math.random() * idleSentences.length)];
+                // 从句子中随机起始字符索引，保证不会越界
+                const maxStart = Math.max(0, sentence.length - 1);
+                const charIndex = Math.floor(Math.random() * maxStart);
+                idleColumnData.push({ sentence, charIndex });
+            }
+        }
+        initIdleColumnData();
+
+        // 初始化 peeling 模式字符集（每列随机选择一句话）
+        // peelingColumnData每列存储对应句子和字符索引
+        let peelingColumnData = [];
+
+        function initPeelingColumnData() {
+            peelingColumnData = [];
+            for (let i = 0; i < columns; i++) {
+                const sentence = peelingSentences[Math.floor(Math.random() * peelingSentences.length)];
+                peelingColumnData.push({ sentence, charIndex: 0 });
+            }
+        }
+
+        function drawMatrix() {
+            ctx.fillStyle = `rgba(0,0,0,${trailOpacity})`; // 拖影透明度
+            ctx.fillRect(0, 0, width, height);
+            ctx.font = fontSize + "px 'Courier New', monospace"; // 字体及字号
+            ctx.fillStyle = "#0f0";
+
+            if (currentRainMode === "idle") {
+                // idle模式：每列显示对应句子的一个字符，字符索引随drops[i]变化循环
+                for (let i = 0; i < columns; i++) {
+                    let data = idleColumnData[i];
+                    let sentence = data.sentence;
+                    // 计算当前字符索引，随drops[i]变化循环
+                    let charIndex = (data.charIndex + drops[i]) % sentence.length;
+                    let text = sentence.charAt(charIndex);
+                    ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+                    if (drops[i] * fontSize > height || Math.random() > 0.975) {
+                        drops[i] = 0;
+                        // 重新随机选择句子和起始字符索引
+                        const newSentence = idleSentences[Math.floor(Math.random() * idleSentences.length)];
+                        const maxStart = Math.max(0, newSentence.length - 1);
+                        const newCharIndex = Math.floor(Math.random() * maxStart);
+                        idleColumnData[i] = { sentence: newSentence, charIndex: newCharIndex };
+                    }
+                    drops[i]++;
+                }
+            } else if (currentRainMode === "peeling") {
+                // peeling模式：每列显示对应句子的一个字符，字符索引随drops[i]变化循环
+                for (let i = 0; i < columns; i++) {
+                    let data = peelingColumnData[i];
+                    let sentence = data.sentence;
+                    // 计算当前字符索引，随drops[i]变化循环
+                    let charIndex = (data.charIndex + drops[i]) % sentence.length;
+                    let text = sentence.charAt(charIndex);
+                    ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+                    if (drops[i] * fontSize > height || Math.random() > 0.975) {
+                        drops[i] = 0;
+                        // 重新随机选择句子
+                        const newSentence = peelingSentences[Math.floor(Math.random() * peelingSentences.length)];
+                        peelingColumnData[i] = { sentence: newSentence, charIndex: 0 };
+                    }
+                    drops[i]++;
+                }
+            } else if (currentRainMode === "peeled") {
+                // peeled模式：整屏横向流动同一句话，所有列显示同一字符，字符索引随peeledOffset变化
+                let sentence = peeledSentence;
+                let len = sentence.length;
+                peeledOffset = (peeledOffset + 1) % len;
+                for (let i = 0; i < columns; i++) {
+                    // 计算字符索引，横向移动
+                    let charIndex = (peeledOffset + i) % len;
+                    let text = sentence.charAt(charIndex);
+                    // y位置随机分布，让字符雨效果还在
+                    let y = (drops[i] * fontSize) % height;
+                    ctx.fillText(text, i * fontSize, y);
+                    drops[i]++;
+                }
+            }
+
+            drawParticlesBG();
+        }
+
+        let drawInterval = setInterval(drawMatrix, rainSpeed);
+
+        window.addEventListener("resize", () => {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+            columns = Math.floor(width / fontSize);
+            drops = Array(columns).fill(1);
+            // 重新初始化列数据
+            initIdleColumnData();
+            initPeelingColumnData();
+        });
+
+        function updateRainSpeed(newSpeed) {
+            rainSpeed = newSpeed;
+            clearInterval(drawInterval);
+            drawInterval = setInterval(drawMatrix, rainSpeed);
+        }
+
+        function setRainMode(mode) {
+            currentRainMode = mode;
+            if (mode === "idle") {
+                initIdleColumnData();
+                updateRainSpeed(baseRainSpeed);
+            } else if (mode === "peeling") {
+                initPeelingColumnData();
+                updateRainSpeed(peelingRainSpeed);
+            } else if (mode === "peeled") {
+                // peeled模式，恢复较慢速度
+                updateRainSpeed(peeledRainSpeed);
+            }
+        }
+
+        // 初始状态为 idle
+        setRainMode("idle");
+
+        // 新增功能：意义膨胀/坍缩
+        function inflateText() {
+            submitOnion('inflate');
+        }
+        function deflateText() {
+            submitOnion('deflate');
+        }
+        function submitOnion(mode) {
+            const text = document.getElementById('input').value;
+            const eventSource = new EventSource(`/analyze?mode=${mode}&text=${encodeURIComponent(text)}`);
+            const output = document.getElementById('output');
+            const loading = document.getElementById('loading');
+            output.innerText = '';
+            loading.innerText = (mode === 'inflate') ? '正在剥洋葱……' : '正在压缩意义……';
+            loading.style.display = 'block';
+
+            // 切换代码雨状态为 peeling，加快速度，切换字符集
+            setRainMode("peeling");
+
+            let firstMessageReceived = false;
+            eventSource.onmessage = function(event) {
+                const data = event.data;
+                if (!firstMessageReceived) {
+                    output.innerText = (mode === 'inflate' ? '「意义膨胀过程」\n' : '「意义坍缩过程」\n');
+                    firstMessageReceived = true;
+                }
+                output.innerText += data + '\n';
+                output.scrollTop = output.scrollHeight;
+
+                // 当收到特定提示“洋葱已剥开！让我闻一下什么味道！”时切换雨模式为peeled
+                if (data.includes("洋葱已剥开！让我闻一下什么味道！")) {
+                    setRainMode("peeled");
+                    loading.innerText = "洋葱已剥开！让我闻一下什么味道！";
+                }
+            };
+            eventSource.onerror = function(error) {
+                loading.style.display = 'none';
+                eventSource.close();
+                setRainMode("idle");
+            };
+            eventSource.onopen = function() {
+                loading.style.display = 'block';
+            };
+        }
+
+        // 粒子背景系统
+
+        function random(min, max) {
+            return Math.random() * (max - min) + min;
+        }
+
+        let particlesBG = [];
+
+        class BGParticle {
+            constructor(x, y) {
+                this.x = x; this.y = y;
+                this.vx = random(-1,1)*2;
+                this.vy = random(-1,1)*2;
+                this.alpha = 255;
+                this.size = random(5, 12);
+                let colors = ["#7fd9fc","#ffe47e","#ffffff"];
+                this.color = colors[Math.floor(Math.random()*colors.length)];
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.alpha -= 0.7;
+            }
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = this.alpha/255;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, 2*Math.PI);
+                ctx.fill();
+                ctx.restore();
+            }
+            isDead() { return this.alpha < 20; }
+        }
+
+        // 鼠标滑动生成粒子
+        canvas.addEventListener("mousemove", (e) => {
+            for(let i=0; i<2; i++) {
+                particlesBG.push(new BGParticle(e.clientX, e.clientY));
+            }
+        });
+
+        function drawParticlesBG() {
+            // 添加透明层以拖尾
+            ctx.save();
+            ctx.globalAlpha = 0.14;
+            ctx.fillStyle = "#000";
+            ctx.fillRect(0, 0, width, height);
+            ctx.restore();
+
+            // 更新和绘制所有粒子
+            for (let p of particlesBG) {
+                p.update();
+                p.draw();
+            }
+
+            // 粒子间连线
+            for (let i = 0; i < particlesBG.length; i++) {
+                for (let j = i+1; j < particlesBG.length; j++) {
+                    let dx = particlesBG[i].x - particlesBG[j].x;
+                    let dy = particlesBG[i].y - particlesBG[j].y;
+                    let dist2 = dx*dx + dy*dy;
+                    if (dist2 < 3600) {
+                        ctx.save();
+                        ctx.strokeStyle = "rgba(80,255,255,0.21)";
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.moveTo(particlesBG[i].x, particlesBG[i].y);
+                        ctx.lineTo(particlesBG[j].x, particlesBG[j].y);
+                        ctx.stroke();
+                        ctx.restore();
+                    }
+                }
+            }
+
+            // 移除消失的粒子
+            particlesBG = particlesBG.filter(p => !p.isDead());
+        }
+    </script>
+</body>
+</html>
+        // END
