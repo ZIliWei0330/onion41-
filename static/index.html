@@ -5,10 +5,10 @@
     <title>洋葱</title>
     <style>
         body {
-            font-family: 'Courier New', monospace; /* 模拟代码字体 */
+            font-family: 'Courier New', monospace;
             text-align: center;
-            background: #000; /* 黑色背景 */
-            color: #0f0; /* 绿色文本，模拟代码 */
+            background: #000;
+            color: #0f0;
             margin: 0;
             overflow: hidden;
         }
@@ -58,7 +58,6 @@
             font-family: Consolas, 'Fira Mono', Menlo, 'IBM Plex Mono', 'Roboto Mono', monospace;
             transition: none !important;
         }
-        /* .ui-container 样式保留，元素将被移除，但样式留作参考 */
         .ui-container {
             position: relative;
             z-index: 1;
@@ -144,22 +143,18 @@
     </style>
 </head>
 <body>
-    <!-- 如需更换音乐只需替换static/music/bgm.mp3或更改src即可 -->
-    <audio id="bgm" src="static/music/BGM1.mp3" autoplay loop preload="auto"></audio>
+    <!-- 音乐功能已彻底移除 -->
     <div id="custom-cursor">ONION</div>
     <canvas id="matrix-bg"></canvas>
     <h1 class="boxed-title center-block">ONION</h1>
     <textarea id="input" class="center-block" placeholder="请输入一句话，比如‘意义是个动词’"></textarea><br>
-    <button class="center-block" onclick="inflateText()">意义膨胀</button>
-    <button class="center-block" onclick="deflateText()">意义坍缩</button>
+    <button class="center-block" onclick="inflateText()">种洋葱</button>
+    <button class="center-block" onclick="deflateText()">剥洋葱</button>
     <div id="output" class="center-block"></div>
     <div id="loading" class="center-block">正在剥洋葱……</div>
-
     <script>
-        // 自定义鼠标指针和BGM自动播放逻辑
+        // 自定义鼠标指针和 onion 拖影动画
         (function() {
-            // 最新 onion-trail 拖影动画逻辑
-            // 替换为最新版
             const customCursor = document.getElementById("custom-cursor");
             if (customCursor) {
                 document.addEventListener("mousemove", (e) => {
@@ -199,43 +194,21 @@
                     customCursor.style.opacity = 1;
                 });
             }
-            // 自动播放BGM
-            const bgm = document.getElementById('bgm');
-            if (bgm) {
-                function tryPlayBGM() {
-                    bgm.volume = 0.45;
-                    const play = () => {
-                        bgm.play().catch(()=>{});
-                        document.removeEventListener("click", play);
-                    };
-                    document.addEventListener("click", play);
-                }
-                tryPlayBGM();
-            }
         })();
-        // Matrix Rain 核心参数配置
-        const baseFontSize = 16; // 字体大小=行距，值越大垂直间距越宽
-        let rainSpeed = 65; // 下落速度，值越大刷新越慢，代码雨下落更慢（初始速度）
+
+        // Matrix Rain 相关参数和数据
+        const baseFontSize = 16;
+        let rainSpeed = 65;
         const baseRainSpeed = 65;
-        const peelingRainSpeed = 30; // 剥洋葱时加快速度
-        const peeledRainSpeed = 80; // 剥开后稍慢速度
-        const trailOpacity = 0.03; // 拖影透明度，值越小拖影越长、消失越慢
+        const peelingRainSpeed = 30;
+        const peeledRainSpeed = 80;
+        const trailOpacity = 0.03;
 
-        // 初始字符集：两个短句随机在列间隔出现
         const idleSentences = ["世界的意义是什么？", "是洋葱！！！"];
-
-        // 剥洋葱时字符集（多句，随机每列抽取）
         const peelingSentences = [
-            "剥开他？",
-            "好臭",
-            "好酸",
-            "好辣啊啊啊啊",
-            "我讨厌剥洋葱",
-            "怎么他妈那么多层啊？",
-            "还没完吗？"
+            "剥开他？", "好臭", "好酸", "好辣啊啊啊啊",
+            "我讨厌剥洋葱", "怎么他妈那么多层啊？", "还没完吗？"
         ];
-
-        // 剥开后字符集，整屏横向流动同一句
         const peeledSentence = "再也不要剥洋葱了！";
 
         const canvas = document.getElementById("matrix-bg");
@@ -251,26 +224,17 @@
         canvas.style.pointerEvents = "none";
 
         const fontSize = baseFontSize;
-        let columns = Math.floor(width / fontSize); // 列数由字体大小决定
-        let drops = Array(columns).fill(1); // 每列的“雨滴”起始位置
+        let columns = Math.floor(width / fontSize);
+        let drops = Array(columns).fill(1);
 
-        // 当前雨内容状态："idle", "peeling", "peeled"
         let currentRainMode = "idle";
-
-        // 用于peeled模式横向流动位置
         let peeledOffset = 0;
 
-        // 初始化 idle 模式字符集（每列随机间隔出现两个短句）
-        // 为了方便drawMatrix处理，idle模式下每列随机选择一个句子和一个字符索引
-        // 这里我们存储每列当前句子和当前字符索引
         let idleColumnData = [];
-
         function initIdleColumnData() {
             idleColumnData = [];
             for (let i = 0; i < columns; i++) {
-                // 随机选择idle句子
                 const sentence = idleSentences[Math.floor(Math.random() * idleSentences.length)];
-                // 从句子中随机起始字符索引，保证不会越界
                 const maxStart = Math.max(0, sentence.length - 1);
                 const charIndex = Math.floor(Math.random() * maxStart);
                 idleColumnData.push({ sentence, charIndex });
@@ -278,10 +242,7 @@
         }
         initIdleColumnData();
 
-        // 初始化 peeling 模式字符集（每列随机选择一句话）
-        // peelingColumnData每列存储对应句子和字符索引
         let peelingColumnData = [];
-
         function initPeelingColumnData() {
             peelingColumnData = [];
             for (let i = 0; i < columns; i++) {
@@ -291,23 +252,19 @@
         }
 
         function drawMatrix() {
-            ctx.fillStyle = `rgba(0,0,0,${trailOpacity})`; // 拖影透明度
+            ctx.fillStyle = `rgba(0,0,0,${trailOpacity})`;
             ctx.fillRect(0, 0, width, height);
-            ctx.font = fontSize + "px 'Courier New', monospace"; // 字体及字号
+            ctx.font = fontSize + "px 'Courier New', monospace";
             ctx.fillStyle = "#0f0";
-
             if (currentRainMode === "idle") {
-                // idle模式：每列显示对应句子的一个字符，字符索引随drops[i]变化循环
                 for (let i = 0; i < columns; i++) {
                     let data = idleColumnData[i];
                     let sentence = data.sentence;
-                    // 计算当前字符索引，随drops[i]变化循环
                     let charIndex = (data.charIndex + drops[i]) % sentence.length;
                     let text = sentence.charAt(charIndex);
                     ctx.fillText(text, i * fontSize, drops[i] * fontSize);
                     if (drops[i] * fontSize > height || Math.random() > 0.975) {
                         drops[i] = 0;
-                        // 重新随机选择句子和起始字符索引
                         const newSentence = idleSentences[Math.floor(Math.random() * idleSentences.length)];
                         const maxStart = Math.max(0, newSentence.length - 1);
                         const newCharIndex = Math.floor(Math.random() * maxStart);
@@ -316,38 +273,31 @@
                     drops[i]++;
                 }
             } else if (currentRainMode === "peeling") {
-                // peeling模式：每列显示对应句子的一个字符，字符索引随drops[i]变化循环
                 for (let i = 0; i < columns; i++) {
                     let data = peelingColumnData[i];
                     let sentence = data.sentence;
-                    // 计算当前字符索引，随drops[i]变化循环
                     let charIndex = (data.charIndex + drops[i]) % sentence.length;
                     let text = sentence.charAt(charIndex);
                     ctx.fillText(text, i * fontSize, drops[i] * fontSize);
                     if (drops[i] * fontSize > height || Math.random() > 0.975) {
                         drops[i] = 0;
-                        // 重新随机选择句子
                         const newSentence = peelingSentences[Math.floor(Math.random() * peelingSentences.length)];
                         peelingColumnData[i] = { sentence: newSentence, charIndex: 0 };
                     }
                     drops[i]++;
                 }
             } else if (currentRainMode === "peeled") {
-                // peeled模式：整屏横向流动同一句话，所有列显示同一字符，字符索引随peeledOffset变化
                 let sentence = peeledSentence;
                 let len = sentence.length;
                 peeledOffset = (peeledOffset + 1) % len;
                 for (let i = 0; i < columns; i++) {
-                    // 计算字符索引，横向移动
                     let charIndex = (peeledOffset + i) % len;
                     let text = sentence.charAt(charIndex);
-                    // y位置随机分布，让字符雨效果还在
                     let y = (drops[i] * fontSize) % height;
                     ctx.fillText(text, i * fontSize, y);
                     drops[i]++;
                 }
             }
-
             drawParticlesBG();
         }
 
@@ -360,7 +310,6 @@
             canvas.height = height;
             columns = Math.floor(width / fontSize);
             drops = Array(columns).fill(1);
-            // 重新初始化列数据
             initIdleColumnData();
             initPeelingColumnData();
         });
@@ -380,15 +329,12 @@
                 initPeelingColumnData();
                 updateRainSpeed(peelingRainSpeed);
             } else if (mode === "peeled") {
-                // peeled模式，恢复较慢速度
                 updateRainSpeed(peeledRainSpeed);
             }
         }
 
-        // 初始状态为 idle
         setRainMode("idle");
 
-        // 新增功能：意义膨胀/坍缩
         function inflateText() {
             submitOnion('inflate');
         }
@@ -404,7 +350,6 @@
             loading.innerText = (mode === 'inflate') ? '正在剥洋葱……' : '正在压缩意义……';
             loading.style.display = 'block';
 
-            // 切换代码雨状态为 peeling，加快速度，切换字符集
             setRainMode("peeling");
 
             let firstMessageReceived = false;
@@ -417,7 +362,6 @@
                 output.innerText += data + '\n';
                 output.scrollTop = output.scrollHeight;
 
-                // 当收到特定提示“洋葱已剥开！让我闻一下什么味道！”时切换雨模式为peeled
                 if (data.includes("洋葱已剥开！让我闻一下什么味道！")) {
                     setRainMode("peeled");
                     loading.innerText = "洋葱已剥开！让我闻一下什么味道！";
@@ -434,7 +378,6 @@
         }
 
         // 粒子背景系统
-
         function random(min, max) {
             return Math.random() * (max - min) + min;
         }
@@ -468,7 +411,6 @@
             isDead() { return this.alpha < 20; }
         }
 
-        // 鼠标滑动生成粒子
         canvas.addEventListener("mousemove", (e) => {
             for(let i=0; i<2; i++) {
                 particlesBG.push(new BGParticle(e.clientX, e.clientY));
@@ -476,20 +418,16 @@
         });
 
         function drawParticlesBG() {
-            // 添加透明层以拖尾
             ctx.save();
             ctx.globalAlpha = 0.14;
             ctx.fillStyle = "#000";
             ctx.fillRect(0, 0, width, height);
             ctx.restore();
 
-            // 更新和绘制所有粒子
             for (let p of particlesBG) {
                 p.update();
                 p.draw();
             }
-
-            // 粒子间连线
             for (let i = 0; i < particlesBG.length; i++) {
                 for (let j = i+1; j < particlesBG.length; j++) {
                     let dx = particlesBG[i].x - particlesBG[j].x;
@@ -507,11 +445,8 @@
                     }
                 }
             }
-
-            // 移除消失的粒子
             particlesBG = particlesBG.filter(p => !p.isDead());
         }
     </script>
 </body>
 </html>
-        // END
