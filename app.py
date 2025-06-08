@@ -143,4 +143,4 @@ def analyze():
         return Response(fallback_generate(), mimetype='text/event-stream') if not error_msg else Response(error_generate(), mimetype='text/event-stream')
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
