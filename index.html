@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>洋葱</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            text-align: center;
+            background: #000;
+            color: #0f0;
+            margin: 0;
+            overflow: hidden;
+            /* 背景发光 */
+            box-shadow: 0 0 32px #15ff66, 0 0 128px #0f0 inset;
+        }
+        body, canvas {
+            cursor: none !important;
+        }
+        /* 输入框和所有 button 字体轻微发光，不再发光边框 */
+#input, button {
+  text-shadow: 0 0 8px #5b9376, 0 0 20px #3f6, 0 0 1px #fff;
+  /* box-shadow 移除，保留 text-shadow */
+}
+
+        /* 抖动动画定义 */
+@keyframes shake {
+  0% { transform: translateX(0);}
+  12% { transform: translateX(-2px);}
+  24% { transform: translateX(2px);}
+  36% { transform: translateX(-2px);}
+  48% { transform: translateX(2px);}
+  60% { transform: translateX(-1px);}
+  72% { transform: translateX(1px);}
+  84% { transform: translateX(-1px);}
+  100% { transform: translateX(0);}
+}
+
+        /* 给“千万别点”按钮加抖动动画 */
+button[onclick="mysteryEggClick()"] {
+  animation: shake 1.2s infinite linear;
+}
+        #matrix-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw !important;
+            height: 100vh !important;
+            z-index: 0;
+            pointer-events: none;
+        }
+        #custom-cursor {
+            font-size: 1.22em !important;
+            font-weight: 900;
+            letter-spacing: 0.03em;
+            opacity: 1 !important;
+            filter: none !important;
+            text-shadow: none !important;
+            user-select: none;
+            pointer-events: none;
+            z-index: 10000;
+            position: fixed;
+            left: 0;
+            top: 0;
+            color: #fff;
+            font-family: Consolas, 'Fira Mono', Menlo, 'IBM Plex Mono', 'Roboto Mono', monospace;
+            transition: opacity 0.15s;
+        }
+        .onion-trail {
+            font-size: 1.22em !important;
+            font-weight: 900;
+            letter-spacing: 0.03em;
+            opacity: 1 !important;
+            filter: none !important;
+            text-shadow: none !important;
+            user-select: none;
+            pointer-events: none;
+            z-index: 9999;
+            position: fixed;
+            left: 0;
+            top: 0;
+            color: #fff;
+            font-family: Consolas, 'Fira Mono', Menlo, 'IBM Plex Mono', 'Roboto Mono', monospace;
+            transition: none !important;
+        }
+        .ui-container {
+            position: relative;
+            z-index: 1;
+            width: 70vw;
+            margin: 40px auto 0 auto;
+            padding: 30px 30px 25px 30px;
+            background: rgba(0,0,0,0.7);
+            border: 2px solid #0f0;
+            border-radius: 0;
+        }
+        .boxed-title {
+            font-size: 4em;
+            font-weight: bold;
+            letter-spacing: 0.2em;
+            text-align: center;
+            border: 2px solid #0f0;
+            border-radius: 0;
+            margin-bottom: 24px;
+            padding: 10px 0;
+            font-family: Consolas, 'Fira Mono', 'IBM Plex Mono', monospace !important;
+            background: rgba(0,0,0,0.95);
+            color: #0f0;
+            z-index: 11000;
+            position: relative;
+        }
+        #input, #output {
+            border: 1.5px solid #0f0;
+            border-radius: 0;
+            background: #000;
+            color: #0f0;
+            font-family: 'Courier New', monospace;
+            z-index: 11000;
+            position: relative;
+            text-align: center;
+            font-size: 1.35em;
+        }
+        #input {
+            min-height: 80px;
+            margin-bottom: 20px;
+            z-index: 11000;
+            position: relative;
+        }
+        #input::placeholder {
+            text-align: center;
+        }
+        button {
+            border: 1.5px solid #0f0;
+            border-radius: 0;
+            background: #000;
+            color: #0f0;
+            font-family: 'Courier New', monospace;
+            margin-bottom: 18px;
+            margin-right: 8px;
+            cursor: pointer;
+            z-index: 11000;
+            position: relative;
+            font-size: 1.2em;
+        }
+        #output {
+            margin-top: 20px;
+            min-height: 40px;
+            padding: 8px;
+            max-height: 300px;
+            overflow-y: auto;
+            background: rgba(0,0,0,0.75);
+            z-index: 11000;
+            position: relative;
+            /* 输出文本更强发光 */
+            text-shadow: 0 0 8px #31fa91, 0 0 20px #3f6, 0 0 1px #fff;
+        }
+        .center-block {
+            width: 80vw;
+            max-width: 1080px;
+            min-width: 320px;
+            margin: 0 auto 18px auto;
+            display: block;
+        }
+        #loading {
+            display: none;
+            margin-top: 10px;
+            font-style: italic;
+            z-index: 11000;
+            position: relative;
+        }
+    </style>
+</head>
+<body>
+    <!-- 音乐功能已彻底移除 -->
+    <div id="custom-cursor">ONION</div>
+    <canvas id="matrix-bg"></canvas>
+    <h1 class="boxed-title center-block">ONION</h1>
+    <textarea id="input" class="center-block" placeholder="写一句话，体验九层意义膨胀/坍缩"></textarea><br>
+    <button class="center-block" onclick="inflateText()">意义膨胀（九层）</button>
+    <button class="center-block" onclick="deflateText()">意义坍缩（九层）</button>
+    <button class="center-block" onclick="mysteryEggClick()">千万别点</button>
+    <div id="output" class="center-block"></div>
+    <div id="loading" class="center-block">正在剥洋葱……</div>
+    <script>
+        // 自定义鼠标指针和 onion 拖影动画
+        (function() {
+            const customCursor = document.getElementById("custom-cursor");
+            if (customCursor) {
+                document.addEventListener("mousemove", (e) => {
+                    const rect = customCursor.getBoundingClientRect();
+                    const offsetX = rect.width / 2;
+                    const offsetY = rect.height / 2;
+                    customCursor.style.transform = `translate(${e.clientX - offsetX}px, ${e.clientY - offsetY}px)`;
+                    customCursor.style.opacity = 1;
+                    // 拖影
+                    const trailDiv = document.createElement('div');
+                    trailDiv.className = 'onion-trail';
+                    trailDiv.innerText = customCursor.innerText;
+                    trailDiv.style.transform = `translate(${e.clientX - offsetX}px, ${e.clientY - offsetY}px)`;
+                    trailDiv.style.opacity = 1;
+                    trailDiv.style.transition = 'opacity 1.5s linear, color 1.5s linear';
+                    document.body.appendChild(trailDiv);
+
+                    let t = 0;
+                    const fadeSteps = 15;
+                    const interval = setInterval(() => {
+                        t++;
+                        const percent = t / fadeSteps;
+                        // rgb(0,255,0) -> rgb(255,255,255)
+                        const c = Math.floor(255 * percent);
+                        trailDiv.style.color = `rgb(${c},255,${c})`;
+                        trailDiv.style.opacity = 1 - percent;
+                        if (t > fadeSteps) {
+                            clearInterval(interval);
+                            if (trailDiv.parentNode) trailDiv.parentNode.removeChild(trailDiv);
+                        }
+                    }, 100);
+                });
+                document.addEventListener("mouseleave", () => {
+                    customCursor.style.opacity = 0;
+                });
+                document.addEventListener("mouseenter", () => {
+                    customCursor.style.opacity = 1;
+                });
+            }
+        })();
+
+        // Matrix Rain 相关参数和数据
+        const baseFontSize = 16;
+        let rainSpeed = 65;
+        const baseRainSpeed = 65;
+        const peelingRainSpeed = 30;
+        const peeledRainSpeed = 80;
+        const trailOpacity = 0.03;
+
+        const idleSentences = ["世界的意义是什么？", "是洋葱！！！"];
+        const peelingSentences = [
+            "剥开他？", "好臭", "好酸", "好辣啊啊啊啊",
+            "我讨厌剥洋葱", "怎么他妈那么多层啊？", "还没完吗？"
+        ];
+        const peeledSentence = "再也不要剥洋葱了！";
+
+        const canvas = document.getElementById("matrix-bg");
+        const ctx = canvas.getContext("2d");
+        let width = window.innerWidth;
+        let height = window.innerHeight;
+        canvas.width = width;
+        canvas.height = height;
+        canvas.style.position = "fixed";
+        canvas.style.top = 0;
+        canvas.style.left = 0;
+        canvas.style.zIndex = 0;
+        canvas.style.pointerEvents = "none";
+
+        const fontSize = baseFontSize;
+        let columns = Math.floor(width / fontSize);
+        let drops = Array(columns).fill(1);
+
+        let currentRainMode = "idle";
+        let peeledOffset = 0;
+
+        let idleColumnData = [];
+        function initIdleColumnData() {
+            idleColumnData = [];
+            for (let i = 0; i < columns; i++) {
+                const sentence = idleSentences[Math.floor(Math.random() * idleSentences.length)];
+                const maxStart = Math.max(0, sentence.length - 1);
+                const charIndex = Math.floor(Math.random() * maxStart);
+                idleColumnData.push({ sentence, charIndex });
+            }
+        }
+        initIdleColumnData();
+
+        let peelingColumnData = [];
+        function initPeelingColumnData() {
+            peelingColumnData = [];
+            for (let i = 0; i < columns; i++) {
+                const sentence = peelingSentences[Math.floor(Math.random() * peelingSentences.length)];
+                peelingColumnData.push({ sentence, charIndex: 0 });
+            }
+        }
+
+        function drawMatrix() {
+            ctx.fillStyle = `rgba(0,0,0,${trailOpacity})`;
+            ctx.fillRect(0, 0, width, height);
+            ctx.font = fontSize + "px 'Courier New', monospace";
+            ctx.fillStyle = "#0f0";
+            if (currentRainMode === "idle") {
+                for (let i = 0; i < columns; i++) {
+                    let data = idleColumnData[i];
+                    let sentence = data.sentence;
+                    let charIndex = (data.charIndex + drops[i]) % sentence.length;
+                    let text = sentence.charAt(charIndex);
+                    ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+                    if (drops[i] * fontSize > height || Math.random() > 0.975) {
+                        drops[i] = 0;
+                        const newSentence = idleSentences[Math.floor(Math.random() * idleSentences.length)];
+                        const maxStart = Math.max(0, newSentence.length - 1);
+                        const newCharIndex = Math.floor(Math.random() * maxStart);
+                        idleColumnData[i] = { sentence: newSentence, charIndex: newCharIndex };
+                    }
+                    drops[i]++;
+                }
+            } else if (currentRainMode === "peeling") {
+                for (let i = 0; i < columns; i++) {
+                    let data = peelingColumnData[i];
+                    let sentence = data.sentence;
+                    let charIndex = (data.charIndex + drops[i]) % sentence.length;
+                    let text = sentence.charAt(charIndex);
+                    ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+                    if (drops[i] * fontSize > height || Math.random() > 0.975) {
+                        drops[i] = 0;
+                        const newSentence = peelingSentences[Math.floor(Math.random() * peelingSentences.length)];
+                        peelingColumnData[i] = { sentence: newSentence, charIndex: 0 };
+                    }
+                    drops[i]++;
+                }
+            } else if (currentRainMode === "peeled") {
+                let sentence = peeledSentence;
+                let len = sentence.length;
+                peeledOffset = (peeledOffset + 1) % len;
+                for (let i = 0; i < columns; i++) {
+                    let charIndex = (peeledOffset + i) % len;
+                    let text = sentence.charAt(charIndex);
+                    let y = (drops[i] * fontSize) % height;
+                    ctx.fillText(text, i * fontSize, y);
+                    drops[i]++;
+                }
+            }
+            drawParticlesBG();
+        }
+
+        let drawInterval = setInterval(drawMatrix, rainSpeed);
+
+        window.addEventListener("resize", () => {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+            columns = Math.floor(width / fontSize);
+            drops = Array(columns).fill(1);
+            initIdleColumnData();
+            initPeelingColumnData();
+        });
+
+        function updateRainSpeed(newSpeed) {
+            rainSpeed = newSpeed;
+            clearInterval(drawInterval);
+            drawInterval = setInterval(drawMatrix, rainSpeed);
+        }
+
+        function setRainMode(mode) {
+            currentRainMode = mode;
+            if (mode === "idle") {
+                initIdleColumnData();
+                updateRainSpeed(baseRainSpeed);
+            } else if (mode === "peeling") {
+                initPeelingColumnData();
+                updateRainSpeed(peelingRainSpeed);
+            } else if (mode === "peeled") {
+                updateRainSpeed(peeledRainSpeed);
+            }
+        }
+
+        setRainMode("idle");
+
+        function inflateText() {
+            submitOnion('inflate');
+        }
+        function deflateText() {
+            submitOnion('deflate');
+        }
+        function submitOnion(mode) {
+            const text = document.getElementById('input').value;
+            const eventSource = new EventSource(`/analyze?mode=${mode}&text=${encodeURIComponent(text)}`);
+            const output = document.getElementById('output');
+            const loading = document.getElementById('loading');
+            output.innerText = '';
+            loading.innerText = (mode === 'inflate') ? '正在剥洋葱……' : '正在压缩意义……';
+            loading.style.display = 'block';
+
+            setRainMode("peeling");
+
+            let firstMessageReceived = false;
+            eventSource.onmessage = function(event) {
+                const data = event.data;
+                if (!firstMessageReceived) {
+                    output.innerText = (mode === 'inflate'
+                        ? '「九层艺术家膨胀过程」\n'
+                        : '「九层市井土味坍缩过程」\n');
+                    firstMessageReceived = true;
+                }
+                output.innerText += data + '\n';
+                output.scrollTop = output.scrollHeight;
+
+                if (data.includes("洋葱已剥开！让我闻一下什么味道！")) {
+                    setRainMode("peeled");
+                    loading.innerText = "洋葱已剥开！让我闻一下什么味道！";
+                }
+            };
+            eventSource.onerror = function(error) {
+                loading.style.display = 'none';
+                eventSource.close();
+                setRainMode("idle");
+            };
+            eventSource.onopen = function() {
+                loading.style.display = 'block';
+            };
+        }
+
+        // 粒子背景系统
+        function random(min, max) {
+            return Math.random() * (max - min) + min;
+        }
+
+        let particlesBG = [];
+
+        class BGParticle {
+            constructor(x, y) {
+                this.x = x; this.y = y;
+                this.vx = random(-1,1)*2;
+                this.vy = random(-1,1)*2;
+                this.alpha = 255;
+                this.size = random(5, 12);
+                let colors = ["#7fd9fc","#ffe47e","#ffffff"];
+                this.color = colors[Math.floor(Math.random()*colors.length)];
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.alpha -= 0.7;
+            }
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = this.alpha/255;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, 2*Math.PI);
+                ctx.fill();
+                ctx.restore();
+            }
+            isDead() { return this.alpha < 20; }
+        }
+
+        canvas.addEventListener("mousemove", (e) => {
+            for(let i=0; i<2; i++) {
+                particlesBG.push(new BGParticle(e.clientX, e.clientY));
+            }
+        });
+
+        function drawParticlesBG() {
+            ctx.save();
+            ctx.globalAlpha = 0.14;
+            ctx.fillStyle = "#000";
+            ctx.fillRect(0, 0, width, height);
+            ctx.restore();
+
+            for (let p of particlesBG) {
+                p.update();
+                p.draw();
+            }
+            for (let i = 0; i < particlesBG.length; i++) {
+                for (let j = i+1; j < particlesBG.length; j++) {
+                    let dx = particlesBG[i].x - particlesBG[j].x;
+                    let dy = particlesBG[i].y - particlesBG[j].y;
+                    let dist2 = dx*dx + dy*dy;
+                    if (dist2 < 3600) {
+                        ctx.save();
+                        ctx.strokeStyle = "rgba(80,255,255,0.21)";
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.moveTo(particlesBG[i].x, particlesBG[i].y);
+                        ctx.lineTo(particlesBG[j].x, particlesBG[j].y);
+                        ctx.stroke();
+                        ctx.restore();
+                    }
+                }
+            }
+            particlesBG = particlesBG.filter(p => !p.isDead());
+        }
+    </script>
+</button>
+<script>
+let eggClickCount = 0;
+function mysteryEggClick() {
+  eggClickCount++;
+  if (eggClickCount === 1) {
+    document.querySelector('button[onclick="mysteryEggClick()"]').innerText = "你确定？";
+  } else if (eggClickCount === 2) {
+    document.querySelector('button[onclick="mysteryEggClick()"]').innerText = "真相常常是错觉";
+  } else {
+    enterSecondLayer();
+  }
+}
+
+function enterSecondLayer() {
+  document.body.innerHTML = `
+    <canvas id="second-layer-canvas" style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:9999;background:#000"></canvas>
+    <div id="center-text" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);color:#0f0;font-size:2.1em;z-index:10000;font-family:Consolas,monospace;text-shadow:0 0 14px #0f0;"></div>
+    <button id="to-bbq" style="display:none;position:fixed;bottom:60px;right:60px;background:#0f0;color:#000;padding:18px 34px;font-size:1.3em;border:none;border-radius:24px;cursor:pointer;z-index:10001;">走，去吃烧烤！</button>
+  `;
+  startSecondLayer();
+}
+
+function startSecondLayer() {
+  const canvas = document.getElementById("second-layer-canvas");
+  const ctx = canvas.getContext("2d");
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  let textArr = "洋葱意义虚无人生钓鱼被骗烧烤黑客宇宙外星人真假层层剥离".split("");
+  let particles = [];
+  let clickCount = 0;
+  for (let i = 0; i < 300; i++) {
+    particles.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      vx: 0, vy: 0,
+      t: textArr[Math.floor(Math.random()*textArr.length)],
+      c: "#0f0"
+    });
+  }
+  let addFrame = 0;
+  function draw() {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    // 新增：每6帧添加8个新字符
+    addFrame++;
+    if (addFrame % 6 === 0) {
+      for (let k=0; k<8; k++) {
+        particles.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height,
+          vx: 0, vy: 0,
+          t: textArr[Math.floor(Math.random()*textArr.length)],
+          c: "#0f0"
+        });
+      }
+      // 控制粒子总数，超出2000则裁剪
+      if (particles.length > 2000) particles.splice(0, particles.length - 2000);
+    }
+
+    for (let p of particles) {
+      // 吸引半径由220扩大到420
+      let dx = mouse.x - p.x, dy = mouse.y - p.y;
+      let dist = Math.sqrt(dx*dx + dy*dy)+10;
+      if (dist<420) {
+        p.vx += dx/dist*0.7;
+        p.vy += dy/dist*0.7;
+      }
+      p.vx *= 0.90; p.vy *= 0.90;
+      p.x += p.vx + (Math.random()-0.5)*1.6;
+      p.y += p.vy + (Math.random()-0.5)*1.6;
+      if (clickCount>2 && Math.random()<clickCount*0.01) p.t = String.fromCharCode(0x30A0+Math.floor(Math.random()*96));
+      ctx.fillStyle = p.c;
+      ctx.font = "22px Consolas";
+      ctx.fillText(p.t, p.x, p.y);
+    }
+    requestAnimationFrame(draw);
+  }
+  let mouse = {x: canvas.width/2, y: canvas.height/2};
+  canvas.onmousemove = e => { mouse.x = e.clientX; mouse.y = e.clientY; }
+  draw();
+
+  canvas.onclick = function() {
+    clickCount++;
+    const centerText = document.getElementById("center-text");
+    const arr = [
+      "人生的意义也许就是剥洋葱。",
+      "有时候你想钓鱼，结果自己成了那条鱼。",
+      "真相？不过是越来越多的乱码。",
+      "意义？或许只是多吃点烧烤。",
+      "你以为你在剥洋葱，其实洋葱也在剥你。"
+    ];
+    centerText.innerText = arr[Math.min(clickCount-1, arr.length-1)];
+    if (clickCount>=arr.length) {
+      document.getElementById("to-bbq").style.display = "block";
+    }
+  };
+  document.getElementById("to-bbq").onclick = ()=> {
+    window.open("https://m.dianping.com/shop/553589104?msource=applemaps", "_blank");
+  };
+}
+</script>
+</body>
+</html>
